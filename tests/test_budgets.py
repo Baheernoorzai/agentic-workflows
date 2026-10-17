@@ -1,6 +1,7 @@
 import pytest
 
 import expenses
+import seed
 
 MONTH = "2026-09"
 
@@ -154,3 +155,21 @@ def test_status_orders_over_budget_first_then_alphabetical(conn):
 def test_status_rejects_bad_month(conn):
     with pytest.raises(ValueError):
         expenses.budget_status(conn, "September")
+
+
+def test_seeded_budgets_cover_every_case(conn):
+    seed.seed(conn)
+    assert seed.seed_budgets(conn) == 12
+    rows = by_category(expenses.budget_status(conn, "2026-09"))
+    assert rows["Groceries"]["over"] is True
+    assert rows["Transport"]["over"] is True
+    assert rows["Rent"]["over"] is False and rows["Rent"]["remaining"] == 0
+    assert rows["Dining"]["over"] is False and rows["Dining"]["remaining"] > 0
+    assert rows["Entertainment"]["budget"] is None and rows["Entertainment"]["over"] is False
+    assert rows["Health"]["spent"] == 0 and rows["Health"]["budget"] == 100
+
+
+def test_seed_budgets_is_repeatable(conn):
+    seed.seed_budgets(conn)
+    seed.seed_budgets(conn)
+    assert len(expenses.list_budgets(conn, "2026-09")) == 6
