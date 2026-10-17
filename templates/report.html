@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Monthly Report</title>
+  <style>
+    body { font-family: sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 1.5rem; }
+    th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid #ddd; }
+    .num { text-align: right; }
+  </style>
+</head>
+<body>
+  <h1>Monthly Report</h1>
+  <p><a href="{{ url_for('index') }}">Back to expenses</a></p>
+
+  {% for m in report.months %}
+  <h2>{{ m.month }}: {{ m.total }} ({{ m.count }} expenses, avg {{ m.average }}, top: {{ m.top_category }})</h2>
+  <table>
+    <thead><tr><th>Category</th><th class="num">Total</th><th class="num">Count</th><th class="num">Percent</th></tr></thead>
+    <tbody>
+      {% for c in m.categories %}
+      <tr>
+        <td>{{ c.category }}</td>
+        <td class="num">{{ c.total }}</td>
+        <td class="num">{{ c.count }}</td>
+        <td class="num">{{ c.percent }}%</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No data.</p>
+  {% endfor %}
+
+  <p>Grand total: {{ report.grand_total }}. Skipped rows: {{ report.skipped }}.</p>
+</body>
+</html>
