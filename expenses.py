@@ -2,6 +2,7 @@
 
 This module has no Flask imports so it can be unit tested directly.
 """
+import math
 import sqlite3
 from datetime import datetime
 
@@ -24,8 +25,20 @@ def get_connection(db_path=DEFAULT_DB):
     return conn
 
 
+BUDGETS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS budgets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL,
+    month TEXT NOT NULL,
+    amount REAL NOT NULL,
+    UNIQUE (category, month)
+)
+"""
+
+
 def init_db(conn):
     conn.execute(SCHEMA)
+    conn.execute(BUDGETS_SCHEMA)
     conn.commit()
 
 
@@ -142,3 +155,84 @@ def monthly_report(expenses):
         })
 
     return {"months": lines, "grand_total": round(grand_total, 2), "skipped": skipped}
+
+
+def _validate_month(month):
+    # Round-trip so unpadded input like "2026-9" is rejected, not stored
+    # under a key that would never match "2026-09".
+    try:
+        if datetime.strptime(month, "%Y-%m").strftime("%Y-%m") != month:
+            raise ValueError
+    except (TypeError, ValueError):
+        raise ValueError("Month must be in YYYY-MM format")
+    return month
+
+
+def set_budget(conn, category, month, amount):
+    """Set the budget for a category and month. Setting it again updates it."""
+    category = (category or "").strip()
+    if not category:
+        raise ValueError("Category is required")
+    _validate_month(month)
+    try:
+        amount = float(amount)
+    except (TypeError, ValueError):
+        raise ValueError("Budget amount must be a number")
+    if not math.isfinite(amount):
+        raise ValueError("Budget amount must be a number")
+    if amount <= 0:
+        raise ValueError("Budget amount must be greater than zero")
+
+    conn.execute(
+        "INSERT INTO budgets (category, month, amount) VALUES (?, ?, ?) "
+        "ON CONFLICT (category, month) DO UPDATE SET amount = excluded.amount",
+        (category, month, amount),
+    )
+    conn.commit()
+
+
+def list_budgets(conn, month):
+    """All budgets set for the given month, ordered by category."""
+    _validate_month(month)
+    rows = conn.execute(
+        "SELECT id, category, month, amount FROM budgets WHERE month = ? ORDER BY category",
+        (month,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def budget_status(conn, month):
+    """Spent versus budget per category for one month (YYYY-MM).
+
+    One row per category that has a budget or any spending that month:
+    {category, budget, spent, remaining, over}. A category with no budget
+    shows its spend but has budget and remaining set to None and is never
+    flagged over. Over means spent is strictly greater than budget.
+    """
+    _validate_month(month)
+
+    # Sum in whole cents so float rounding cannot leak into comparisons.
+    spent_cents = {}
+    rows = conn.execute(
+        "SELECT category, amount FROM expenses WHERE substr(date, 1, 7) = ?",
+        (month,),
+    ).fetchall()
+    for r in rows:
+        spent_cents[r["category"]] = spent_cents.get(r["category"], 0) + round(r["amount"] * 100)
+
+    budget_cents = {b["category"]: round(b["amount"] * 100) for b in list_budgets(conn, month)}
+
+    status = []
+    for category in set(spent_cents) | set(budget_cents):
+        spent = spent_cents.get(category, 0)
+        budget = budget_cents.get(category)
+        status.append({
+            "category": category,
+            "budget": None if budget is None else budget / 100,
+            "spent": spent / 100,
+            "remaining": None if budget is None else (budget - spent) / 100,
+            "over": budget is not None and spent > budget,
+        })
+
+    status.sort(key=lambda s: (not s["over"], s["category"]))
+    return status
