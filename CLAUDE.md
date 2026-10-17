@@ -66,6 +66,16 @@ The four workflows:
 - Prefer read only queries. Never modify expense data while analysing it.
 - State the question, the query used, and any assumptions behind the answer.
 
+## Playbooks
+
+Reusable workflows live in PLAYBOOKS.md. When I say one of these phrases,
+follow the matching playbook there, including its checkpoints:
+
+- "run the feature workflow": Feature Development
+- "run the bug triage workflow": Bug Triage
+- "run the refactoring workflow": Refactoring
+- "run the analytics workflow": Analytics
+
 ## Note
 
 Do not build the app yet. I will ask for it in the next step.
