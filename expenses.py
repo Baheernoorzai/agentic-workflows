@@ -5,6 +5,7 @@ This module has no Flask imports so it can be unit tested directly.
 import math
 import sqlite3
 from datetime import datetime
+from decimal import Decimal
 
 DEFAULT_DB = "expenses.db"
 
@@ -80,12 +81,13 @@ def list_expenses(conn):
 
 def calculate_total(expenses):
     """Sum the amounts of the given expenses (list of dicts)."""
-    # TEACHING CONSTRAINT A: plain float accumulation. Money can pick up
-    # rounding errors this way (e.g. 0.1 + 0.2). To be fixed in bug triage.
-    total = 0.0
+    # FIXED (was TEACHING CONSTRAINT A): float accumulation drifted, e.g.
+    # 0.01 + 33.33 * 3 gave 99.99999999999999. Sum exact decimals instead.
+    # str() gives the shortest round-trip form, so 0.1 becomes Decimal("0.1").
+    total = Decimal("0")
     for e in expenses:
-        total += e["amount"]
-    return total
+        total += Decimal(str(e["amount"]))
+    return float(total)
 
 
 def monthly_report(expenses):
