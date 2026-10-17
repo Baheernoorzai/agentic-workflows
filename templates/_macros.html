@@ -1,0 +1,2 @@
+{# Show a money amount with two decimals, e.g. 100.0 becomes 100.00. #}
+{% macro money(value) %}{{ "%.2f"|format(value) }}{% endmacro %}
