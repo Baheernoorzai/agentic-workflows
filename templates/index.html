@@ -21,9 +21,9 @@
   </form>
 
   <div class="card">
-    <table>
+    <table class="expenses-table">
       <thead>
-        <tr><th>Date</th><th>Category</th><th class="num">Amount</th><th>Note</th></tr>
+        <tr><th>Date</th><th>Category</th><th class="num">Amount</th><th>Note</th><th><span class="sr-only">Actions</span></th></tr>
       </thead>
       <tbody>
         {% for e in expenses %}
@@ -32,9 +32,16 @@
           <td>{{ e.category }}</td>
           <td class="num">{{ money(e.amount) }}</td>
           <td>{{ e.note or "" }}</td>
+          <td class="actions">
+            <form method="post" action="{{ url_for('delete', expense_id=e.id) }}"
+                  onsubmit="return confirm('Delete this expense? This cannot be undone.');">
+              <button class="btn btn-quiet" type="submit"
+                      aria-label="Delete the {{ e.category }} expense from {{ e.date }}"><span class="label-long">Delete</span><span class="label-short" aria-hidden="true">&#10005;</span></button>
+            </form>
+          </td>
         </tr>
         {% else %}
-        <tr><td colspan="4" class="muted">No expenses yet. Add your first one above.</td></tr>
+        <tr class="empty-row"><td colspan="5" class="muted">No expenses yet. Add your first one above.</td></tr>
         {% endfor %}
       </tbody>
     </table>

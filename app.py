@@ -49,6 +49,18 @@ def add():
     return redirect(url_for("index"))
 
 
+@app.route("/delete/<int:expense_id>", methods=["POST"])
+def delete(expense_id):
+    conn = get_conn()
+    try:
+        deleted = expenses.delete_expense(conn, expense_id)
+    finally:
+        conn.close()
+    if not deleted:
+        return redirect(url_for("index", error="Expense not found"))
+    return redirect(url_for("index"))
+
+
 @app.route("/report")
 def report():
     conn = get_conn()
