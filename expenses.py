@@ -79,6 +79,16 @@ def list_expenses(conn):
     return [dict(r) for r in rows]
 
 
+def delete_expense(conn, expense_id):
+    """Permanently delete one expense by id.
+
+    Returns True if a row was deleted, False if no expense has that id.
+    """
+    cur = conn.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
+    conn.commit()
+    return cur.rowcount > 0
+
+
 def calculate_total(expenses):
     """Sum the amounts of the given expenses (list of dicts)."""
     # FIXED (was TEACHING CONSTRAINT A): float accumulation drifted, e.g.
