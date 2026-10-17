@@ -1,4 +1,6 @@
 """Flask web layer. Business logic lives in expenses.py."""
+from datetime import date
+
 from flask import Flask, redirect, render_template, request, url_for
 
 import expenses
@@ -55,6 +57,45 @@ def report():
     finally:
         conn.close()
     return render_template("report.html", report=expenses.monthly_report(items))
+
+
+def current_month():
+    return date.today().strftime("%Y-%m")
+
+
+@app.route("/budgets")
+def budgets():
+    month = request.args.get("month") or current_month()
+    error = request.args.get("error")
+    conn = get_conn()
+    try:
+        try:
+            status = expenses.budget_status(conn, month)
+        except ValueError as exc:
+            error = str(exc)
+            month = current_month()
+            status = expenses.budget_status(conn, month)
+    finally:
+        conn.close()
+    return render_template("budgets.html", month=month, status=status, error=error)
+
+
+@app.route("/budgets", methods=["POST"])
+def set_budget():
+    month = request.form.get("month")
+    conn = get_conn()
+    try:
+        expenses.set_budget(
+            conn,
+            request.form.get("category"),
+            month,
+            request.form.get("amount"),
+        )
+    except ValueError as exc:
+        return redirect(url_for("budgets", month=month, error=str(exc)))
+    finally:
+        conn.close()
+    return redirect(url_for("budgets", month=month))
 
 
 if __name__ == "__main__":

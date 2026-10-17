@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Budgets</title>
+  <style>
+    body { font-family: sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+    form { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.5rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid #ddd; }
+    .error { color: #b00020; }
+    .num { text-align: right; }
+    tr.over { background: #fdecea; }
+    .flag { color: #b00020; font-weight: bold; }
+    .muted { color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Budgets for {{ month }}</h1>
+  <p><a href="{{ url_for('index') }}">Back to expenses</a></p>
+
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  <form method="get" action="{{ url_for('budgets') }}">
+    <input name="month" value="{{ month }}" pattern="\d{4}-\d{2}" placeholder="YYYY-MM" required>
+    <button type="submit">View month</button>
+  </form>
+
+  <h2>Set a budget</h2>
+  <form method="post" action="{{ url_for('set_budget') }}">
+    <input name="category" placeholder="Category" required>
+    <input name="month" value="{{ month }}" pattern="\d{4}-\d{2}" placeholder="YYYY-MM" required>
+    <input name="amount" type="number" step="0.01" min="0.01" placeholder="Budget amount" required>
+    <button type="submit">Save budget</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr><th>Category</th><th class="num">Budget</th><th class="num">Spent</th><th class="num">Remaining</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for s in status %}
+      <tr class="{{ 'over' if s.over else '' }}">
+        <td>{{ s.category }}</td>
+        <td class="num">{% if s.budget is none %}<span class="muted">no budget</span>{% else %}{{ s.budget }}{% endif %}</td>
+        <td class="num">{{ s.spent }}</td>
+        <td class="num">{% if s.remaining is none %}<span class="muted">n/a</span>{% else %}{{ s.remaining }}{% endif %}</td>
+        <td>{% if s.over %}<span class="flag">OVER</span>{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">No spending or budgets for this month.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

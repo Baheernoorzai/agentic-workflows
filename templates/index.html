@@ -14,7 +14,7 @@
 </head>
 <body>
   <h1>Expense Tracker</h1>
-  <p><a href="{{ url_for('report') }}">Monthly report</a></p>
+  <p><a href="{{ url_for('report') }}">Monthly report</a> | <a href="{{ url_for('budgets') }}">Budgets</a></p>
 
   {% if error %}<p class="error">{{ error }}</p>{% endif %}
 
