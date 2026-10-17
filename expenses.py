@@ -37,9 +37,22 @@ CREATE TABLE IF NOT EXISTS budgets (
 """
 
 
+RECEIPTS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS receipts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    expense_id INTEGER NOT NULL UNIQUE,
+    original_name TEXT NOT NULL,
+    stored_name TEXT NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    uploaded_at TEXT NOT NULL
+)
+"""
+
+
 def init_db(conn):
     conn.execute(SCHEMA)
     conn.execute(BUDGETS_SCHEMA)
+    conn.execute(RECEIPTS_SCHEMA)
     conn.commit()
 
 
