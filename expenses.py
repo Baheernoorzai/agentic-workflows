@@ -90,73 +90,112 @@ def calculate_total(expenses):
     return float(total)
 
 
-def monthly_report(expenses):
-    # TEACHING CONSTRAINT B: intentionally long, deeply nested, and doing
-    # several jobs at once (parsing, grouping, totals, stats, formatting).
-    # This is the refactoring target. Do not clean it up yet.
-    report = {}
+def _month_key(date_string):
+    """Return "YYYY-MM" for a "YYYY-MM-DD" date string. Raises ValueError if bad."""
+    d = datetime.strptime(date_string, "%Y-%m-%d")
+    return f"{d.year}-{d.month:02d}"
+
+
+def _group_by_month(expenses):
+    """Sort usable expenses into months and categories. Returns (months, skipped).
+
+    Behavior kept exactly as it was (see the characterization tests):
+    - A month entry is created as soon as a row has a parseable date, even if
+      the amount is then skipped, so such a month can end up empty.
+    - Amounts that are None, zero, negative, or NaN are skipped and counted.
+    - A falsy category becomes "Uncategorized".
+    - category is only read after the amount is accepted.
+    """
+    months = {}
     skipped = 0
-    for e in expenses:
-        if e is not None:
-            if "date" in e and e["date"]:
-                try:
-                    d = datetime.strptime(e["date"], "%Y-%m-%d")
-                    month_key = str(d.year) + "-" + ("0" + str(d.month) if d.month < 10 else str(d.month))
-                    if month_key not in report:
-                        report[month_key] = {"total": 0.0, "count": 0, "categories": {}}
-                    if e["amount"] is not None:
-                        if e["amount"] > 0:
-                            report[month_key]["total"] += e["amount"]
-                            report[month_key]["count"] += 1
-                            cat = e["category"] if e["category"] else "Uncategorized"
-                            if cat not in report[month_key]["categories"]:
-                                report[month_key]["categories"][cat] = {"total": 0.0, "count": 0}
-                            report[month_key]["categories"][cat]["total"] += e["amount"]
-                            report[month_key]["categories"][cat]["count"] += 1
-                        else:
-                            skipped += 1
-                    else:
-                        skipped += 1
-                except ValueError:
-                    skipped += 1
-            else:
-                skipped += 1
-        else:
+    for expense in expenses:
+        if expense is None:
             skipped += 1
+            continue
+        if "date" not in expense or not expense["date"]:
+            skipped += 1
+            continue
+        try:
+            month_key = _month_key(expense["date"])
+        except ValueError:
+            skipped += 1
+            continue
 
+        month = months.setdefault(
+            month_key, {"total": 0.0, "count": 0, "categories": {}}
+        )
+        amount = expense["amount"]
+        if amount is None or not amount > 0:
+            skipped += 1
+            continue
+
+        name = expense["category"] if expense["category"] else "Uncategorized"
+        category = month["categories"].setdefault(name, {"total": 0.0, "count": 0})
+        month["total"] += amount
+        month["count"] += 1
+        category["total"] += amount
+        category["count"] += 1
+    return months, skipped
+
+
+def _top_category(categories):
+    """Name of the category with the largest total, or None if there are none.
+
+    A tie goes to the category seen first (insertion order), not alphabetical.
+    """
+    return max(categories, key=lambda name: categories[name]["total"], default=None)
+
+
+def _category_lines(month):
+    """Per-category rows for one month, alphabetical, with percent of the month."""
     lines = []
-    grand_total = 0.0
-    for month_key in sorted(report.keys()):
-        m = report[month_key]
-        grand_total += m["total"]
-        top_cat = None
-        top_amount = -1
-        for cat in m["categories"]:
-            if m["categories"][cat]["total"] > top_amount:
-                top_amount = m["categories"][cat]["total"]
-                top_cat = cat
-        avg = m["total"] / m["count"] if m["count"] > 0 else 0
-        cat_lines = []
-        for cat in sorted(m["categories"].keys()):
-            pct = 0
-            if m["total"] > 0:
-                pct = m["categories"][cat]["total"] / m["total"] * 100
-            cat_lines.append({
-                "category": cat,
-                "total": round(m["categories"][cat]["total"], 2),
-                "count": m["categories"][cat]["count"],
-                "percent": round(pct, 1),
-            })
+    for name in sorted(month["categories"]):
+        category = month["categories"][name]
+        percent = 0
+        if month["total"] > 0:
+            percent = category["total"] / month["total"] * 100
         lines.append({
-            "month": month_key,
-            "total": round(m["total"], 2),
-            "count": m["count"],
-            "average": round(avg, 2),
-            "top_category": top_cat,
-            "categories": cat_lines,
+            "category": name,
+            "total": round(category["total"], 2),
+            "count": category["count"],
+            "percent": round(percent, 1),
         })
+    return lines
 
-    return {"months": lines, "grand_total": round(grand_total, 2), "skipped": skipped}
+
+def _month_summary(month_key, month):
+    """One month's row in the report: totals, average, top category, categories."""
+    average = month["total"] / month["count"] if month["count"] > 0 else 0
+    return {
+        "month": month_key,
+        "total": round(month["total"], 2),
+        "count": month["count"],
+        "average": round(average, 2),
+        "top_category": _top_category(month["categories"]),
+        "categories": _category_lines(month),
+    }
+
+
+def monthly_report(expenses):
+    """Spending report grouped by month, then by category.
+
+    Returns {"months": [...], "grand_total": float, "skipped": int}. Months
+    are in date order. Rows that cannot be used are counted in "skipped".
+
+    REFACTORED (was TEACHING CONSTRAINT B). Behavior is unchanged and pinned by
+    tests/test_monthly_report_characterization.py, quirks included.
+    """
+    months, skipped = _group_by_month(expenses)
+    summaries = []
+    grand_total = 0.0
+    for month_key in sorted(months):
+        grand_total += months[month_key]["total"]
+        summaries.append(_month_summary(month_key, months[month_key]))
+    return {
+        "months": summaries,
+        "grand_total": round(grand_total, 2),
+        "skipped": skipped,
+    }
 
 
 def _validate_month(month):
