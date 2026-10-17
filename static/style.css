@@ -230,6 +230,26 @@ input:focus-visible {
 }
 .btn-quiet:hover { color: var(--coral); border-color: var(--coral); background: rgba(255, 111, 111, 0.08); box-shadow: none; }
 
+.receipt { white-space: nowrap; }
+.receipt-link { color: var(--gold); font-weight: 600; margin-right: 0.6rem; text-decoration: none; }
+.receipt-link:hover { text-decoration: underline; }
+.receipt-form { display: inline; margin: 0; }
+.file-pick {
+  display: inline-block;
+  position: relative;
+  cursor: pointer;
+  color: var(--silver);
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  padding: 0.25rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: color 0.18s var(--ease), border-color 0.18s var(--ease), background 0.18s var(--ease);
+}
+.file-pick:hover { color: var(--gold); border-color: var(--gold); background: rgba(232, 182, 74, 0.08); }
+.file-pick:focus-within { outline: 2px solid var(--text); outline-offset: 3px; }
+.file-pick input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; font-size: 0; }
+
 /* ---- report ---- */
 
 .stat-line { margin: 0 0 0.75rem; color: var(--muted); }
@@ -259,7 +279,8 @@ input:focus-visible {
     grid-template-areas:
       "category amount actions"
       "date     date   actions"
-      "note     note   note";
+      "note     note   note"
+      "receipt  receipt receipt";
     align-items: center;
     column-gap: 0.75rem;
     padding: 0.7rem 0.25rem;
@@ -272,6 +293,7 @@ input:focus-visible {
   .expenses-table td:nth-child(3) { grid-area: amount; font-size: 1rem; }
   .expenses-table td:nth-child(4) { grid-area: note; color: var(--muted); font-size: 0.85rem; }
   .expenses-table td:nth-child(4):empty { display: none; }
+  .expenses-table td.receipt { grid-area: receipt; padding-top: 0.5rem; }
   .expenses-table td.actions { grid-area: actions; }
   .expenses-table .empty-row { display: block; }
 }

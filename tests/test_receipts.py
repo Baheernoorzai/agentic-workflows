@@ -256,3 +256,27 @@ def test_init_db_is_safe_to_run_twice(conn):
     expenses.init_db(conn)
     expenses.init_db(conn)
     assert rows(conn) == []
+
+
+def test_receipts_by_expense_maps_expense_id_to_record(conn, updir, eid):
+    other = expenses.add_expense(conn, 5, "Dining", "2026-09-02")
+    rid = receipts.save_receipt(conn, updir, eid, "a.pdf", PDF)
+    found = receipts.receipts_by_expense(conn)
+    assert list(found) == [eid]
+    assert found[eid]["id"] == rid
+    assert other not in found
+
+
+def test_receipts_by_expense_empty(conn):
+    assert receipts.receipts_by_expense(conn) == {}
+
+
+def test_delete_for_expense_removes_row_and_file(conn, updir, eid):
+    receipts.save_receipt(conn, updir, eid, "a.pdf", PDF)
+    assert receipts.delete_for_expense(conn, updir, eid) is True
+    assert rows(conn) == []
+    assert files(updir) == []
+
+
+def test_delete_for_expense_without_receipt_is_false(conn, updir, eid):
+    assert receipts.delete_for_expense(conn, updir, eid) is False

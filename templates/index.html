@@ -23,7 +23,7 @@
   <div class="card">
     <table class="expenses-table">
       <thead>
-        <tr><th>Date</th><th>Category</th><th class="num">Amount</th><th>Note</th><th><span class="sr-only">Actions</span></th></tr>
+        <tr><th>Date</th><th>Category</th><th class="num">Amount</th><th>Note</th><th>Receipt</th><th><span class="sr-only">Actions</span></th></tr>
       </thead>
       <tbody>
         {% for e in expenses %}
@@ -32,6 +32,20 @@
           <td>{{ e.category }}</td>
           <td class="num">{{ money(e.amount) }}</td>
           <td>{{ e.note or "" }}</td>
+          <td class="receipt">
+            {% set r = receipts.get(e.id) %}
+            {% if r %}<a class="receipt-link" href="{{ url_for('view_receipt', receipt_id=r.id) }}" target="_blank" rel="noopener"
+                         aria-label="View receipt {{ r.original_name }}">View PDF</a>{% endif %}
+            <form class="receipt-form" method="post" action="{{ url_for('upload_receipt', expense_id=e.id) }}" enctype="multipart/form-data">
+              <label class="file-pick">
+                <span>{{ "Replace" if r else "Attach PDF" }}</span>
+                <input type="file" name="receipt" accept="application/pdf,.pdf"
+                       aria-label="{{ 'Replace' if r else 'Attach' }} receipt for the {{ e.category }} expense from {{ e.date }}"
+                       onchange="this.form.submit()">
+              </label>
+              <noscript><button class="btn btn-quiet" type="submit">Upload</button></noscript>
+            </form>
+          </td>
           <td class="actions">
             <form method="post" action="{{ url_for('delete', expense_id=e.id) }}"
                   onsubmit="return confirm('Delete this expense? This cannot be undone.');">
@@ -41,7 +55,7 @@
           </td>
         </tr>
         {% else %}
-        <tr class="empty-row"><td colspan="5" class="muted">No expenses yet. Add your first one above.</td></tr>
+        <tr class="empty-row"><td colspan="6" class="muted">No expenses yet. Add your first one above.</td></tr>
         {% endfor %}
       </tbody>
     </table>

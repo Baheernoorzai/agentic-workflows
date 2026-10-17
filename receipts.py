@@ -61,6 +61,23 @@ def get_receipt(conn, receipt_id):
     return dict(row) if row else None
 
 
+def receipts_by_expense(conn):
+    """Every receipt record, as a dict keyed by expense id."""
+    rows = conn.execute(
+        "SELECT id, expense_id, original_name, stored_name, size_bytes, uploaded_at "
+        "FROM receipts"
+    ).fetchall()
+    return {r["expense_id"]: dict(r) for r in rows}
+
+
+def delete_for_expense(conn, upload_dir, expense_id):
+    """Delete the receipt (row and file) that belongs to an expense, if any."""
+    row = conn.execute(
+        "SELECT id FROM receipts WHERE expense_id = ?", (expense_id,)
+    ).fetchone()
+    return bool(row) and delete_receipt(conn, upload_dir, row["id"])
+
+
 def save_receipt(conn, upload_dir, expense_id, filename, data):
     """Validate and store a PDF receipt for an expense. Returns the receipt id.
 
